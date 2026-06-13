@@ -50,6 +50,12 @@ HTML = r"""<!doctype html>
     .status.recording { background: #fef2f2; color: #b91c1c; }
     .dot { width: 10px; height: 10px; border-radius: 50%; background: currentColor; display: inline-block; }
     .recording .dot { animation: pulse 1s infinite; }
+    .tabs { display: flex; gap: 8px; margin: 4px 0 14px; border-bottom: 1px solid #d8e1ee; }
+    .tab-button { border: 1px solid transparent; border-bottom: 0; border-radius: 8px 8px 0 0; background: transparent; color: #475569; padding: 10px 16px; margin: 0; font-weight: 700; }
+    .tab-button.active { background: #fff; color: #1d4ed8; border-color: #d8e1ee; box-shadow: 0 -1px 0 #fff inset; }
+    .tab-button:hover { background: #eff6ff; color: #1d4ed8; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
     @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(1.4); } }
     a { color: #2563eb; }
   </style>
@@ -74,30 +80,37 @@ HTML = r"""<!doctype html>
     </section>
 
     <section>
-      <h2>录制电脑声音</h2>
-      <div class="row">
-        <label>固定录制秒数 <input id="seconds" type="number" min="1" value="60"></label>
-        <button onclick="recordFixed()">固定时长录制</button>
+      <div class="tabs" role="tablist" aria-label="录制功能">
+        <button id="recordTab" class="tab-button active" role="tab" aria-selected="true" aria-controls="recordPanel" onclick="showRecordTab('record')">录制电脑声音</button>
+        <button id="liveTab" class="tab-button" role="tab" aria-selected="false" aria-controls="livePanel" onclick="showRecordTab('live')">实时会议记录</button>
       </div>
-      <div class="row">
-        <button id="startBtn" onclick="recordStart()">开始录制</button>
-        <button id="stopBtn" class="secondary" onclick="recordStop()">停止录制</button>
-        <button id="transcribeRecordingBtn" onclick="transcribeLastRecording()">转写最后一次录音</button>
-      </div>
-      <div id="recordStatus" class="status"><span class="dot"></span><span id="recordStatusText">未在录制</span></div>
-      <p id="lastRecording" class="muted">还没有录制文件。录制完成后会自动加载到“转写最后一次录音”。</p>
-    </section>
 
-    <section>
-      <h2>实时会议记录</h2>
-      <p class="muted">同时录制电脑扬声器声音和麦克风声音；麦克风会按片段实时转写并显示在这里。停止后自动生成音频和记录文件。</p>
-      <div class="row">
-        <button id="liveStartBtn" onclick="liveStart()">开始实时记录</button>
-        <button id="liveStopBtn" class="secondary" onclick="liveStop()">停止并生成文件</button>
+      <div id="recordPanel" class="tab-panel active" role="tabpanel" aria-labelledby="recordTab">
+        <h2>录制电脑声音</h2>
+        <div class="row">
+          <label>固定录制秒数 <input id="seconds" type="number" min="1" value="60"></label>
+          <button onclick="recordFixed()">固定时长录制</button>
+        </div>
+        <div class="row">
+          <button id="startBtn" onclick="recordStart()">开始录制</button>
+          <button id="stopBtn" class="secondary" onclick="recordStop()">停止录制</button>
+          <button id="transcribeRecordingBtn" onclick="transcribeLastRecording()">转写最后一次录音</button>
+        </div>
+        <div id="recordStatus" class="status"><span class="dot"></span><span id="recordStatusText">未在录制</span></div>
+        <p id="lastRecording" class="muted">还没有录制文件。录制完成后会自动加载到“转写最后一次录音”。</p>
       </div>
-      <div id="liveStatus" class="status"><span class="dot"></span><span id="liveStatusText">未在实时记录</span></div>
-      <label>实时字幕</label>
-      <div id="liveCaptions">等待开始...</div>
+
+      <div id="livePanel" class="tab-panel" role="tabpanel" aria-labelledby="liveTab">
+        <h2>实时会议记录</h2>
+        <p class="muted">同时录制电脑扬声器声音和麦克风声音；麦克风会按片段实时转写并显示在这里。停止后自动生成音频和记录文件。</p>
+        <div class="row">
+          <button id="liveStartBtn" onclick="liveStart()">开始实时记录</button>
+          <button id="liveStopBtn" class="secondary" onclick="liveStop()">停止并生成文件</button>
+        </div>
+        <div id="liveStatus" class="status"><span class="dot"></span><span id="liveStatusText">未在实时记录</span></div>
+        <label>实时字幕</label>
+        <div id="liveCaptions">等待开始...</div>
+      </div>
     </section>
 
     <section>
@@ -120,6 +133,16 @@ function log(msg) {
 
 function language() {
   return encodeURIComponent(document.getElementById('language').value);
+}
+
+function showRecordTab(tab) {
+  const isLive = tab === 'live';
+  document.getElementById('recordTab').classList.toggle('active', !isLive);
+  document.getElementById('liveTab').classList.toggle('active', isLive);
+  document.getElementById('recordPanel').classList.toggle('active', !isLive);
+  document.getElementById('livePanel').classList.toggle('active', isLive);
+  document.getElementById('recordTab').setAttribute('aria-selected', String(!isLive));
+  document.getElementById('liveTab').setAttribute('aria-selected', String(isLive));
 }
 
 function setRecordingState(isRecording, detail) {
