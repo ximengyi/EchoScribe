@@ -8,6 +8,7 @@ from typing import Callable
 from echoscribe.config import model_path
 from echoscribe.core.media import extract_audio, safe_stem
 from echoscribe.core.subtitles import Segment, to_plain_txt, to_srt, to_txt
+from echoscribe.core.text import should_simplify_language, to_simplified_chinese
 
 
 ProgressCallback = Callable[[str], None]
@@ -53,8 +54,11 @@ class Transcriber:
         )
 
         segments: list[Segment] = []
+        simplify_text = should_simplify_language(info.language)
         for item in segments_iter:
             text = item.text.strip()
+            if simplify_text:
+                text = to_simplified_chinese(text)
             if text:
                 segments.append(Segment(start=float(item.start), end=float(item.end), text=text))
                 self._progress(f"Recognized {len(segments)} segment(s)...")
