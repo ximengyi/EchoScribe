@@ -1,0 +1,6 @@
+This directory contains ffmpeg.exe for local media conversion.
+
+The development scaffold copies ffmpeg.exe from the local ShareX installation.
+Before distributing EchoScribe publicly, replace this notice with the exact
+license text and build notices for the ffmpeg binary being shipped.
+
