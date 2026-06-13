@@ -33,87 +33,130 @@ HTML = r"""<!doctype html>
   <title>EchoScribe</title>
   <style>
     body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; background: #f5f7fb; color: #172033; }
-    main { max-width: 960px; margin: 0 auto; padding: 28px; }
-    h1 { margin: 0 0 4px; font-size: 30px; }
+    main { max-width: 1000px; margin: 0 auto; padding: 28px; }
+    h1 { margin: 0 0 4px; font-size: 34px; }
+    h2 { margin: 0 0 14px; font-size: 30px; }
     p { color: #59657a; }
     section { background: #fff; border: 1px solid #e0e6f0; border-radius: 8px; padding: 18px; margin: 16px 0; }
     label { display: block; font-weight: 600; margin: 12px 0 6px; }
     input, select, button { font: inherit; }
-    input[type="number"], select { padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; }
+    input[type="number"], select { padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; min-height: 38px; }
     input[type="file"] { display: block; }
     button { padding: 9px 14px; border: 0; border-radius: 6px; background: #2563eb; color: white; cursor: pointer; margin-right: 8px; }
     button.secondary { background: #475569; }
     button.danger { background: #dc2626; }
     button:disabled { background: #94a3b8; cursor: wait; }
-    #log { white-space: pre-wrap; background: #0f172a; color: #dbeafe; border-radius: 8px; padding: 14px; min-height: 180px; overflow: auto; }
-    #liveCaptions { white-space: pre-wrap; background: #111827; color: #f8fafc; border-radius: 8px; padding: 14px; min-height: 160px; overflow: auto; font-size: 17px; line-height: 1.6; }
+    #log { white-space: pre-wrap; background: #0f172a; color: #dbeafe; border-radius: 8px; padding: 14px; min-height: 150px; overflow: auto; }
+    #liveCaptions { white-space: pre-wrap; background: #111827; color: #f8fafc; border-radius: 8px; padding: 18px; min-height: 190px; overflow: auto; font-size: 17px; line-height: 1.6; }
+    .header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 6px 0 24px; }
+    .subtitle { margin: 16px 0 0; font-size: 18px; }
+    .app-card { padding: 0; overflow: hidden; }
+    .panel-body { padding: 32px 26px 28px; }
     .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
     .muted { color: #64748b; font-size: 13px; }
+    .intro { color: #64748b; font-size: 16px; margin: 0 0 28px; }
     .status { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; padding: 10px 12px; border-radius: 8px; background: #ecfdf5; color: #166534; font-weight: 700; }
     .status.recording { background: #fef2f2; color: #b91c1c; }
     .dot { width: 10px; height: 10px; border-radius: 50%; background: currentColor; display: inline-block; }
     .recording .dot { animation: pulse 1s infinite; }
-    .tabs { display: flex; gap: 8px; margin: 4px 0 14px; border-bottom: 1px solid #d8e1ee; }
-    .tab-button { border: 1px solid transparent; border-bottom: 0; border-radius: 8px 8px 0 0; background: transparent; color: #475569; padding: 10px 16px; margin: 0; font-weight: 700; }
-    .tab-button.active { background: #fff; color: #1d4ed8; border-color: #d8e1ee; box-shadow: 0 -1px 0 #fff inset; }
+    .tabs { display: flex; gap: 8px; padding: 20px 24px 0; border-bottom: 1px solid #d8e1ee; }
+    .tab-button { border: 1px solid transparent; border-bottom: 0; border-radius: 8px 8px 0 0; background: transparent; color: #475569; padding: 13px 20px; margin: 0 0 -1px; font-weight: 700; }
+    .tab-button.active { background: #fff; color: #1d4ed8; border-color: #d8e1ee; box-shadow: 0 1px 0 #fff; }
     .tab-button:hover { background: #eff6ff; color: #1d4ed8; }
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
+    .path-row { display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: center; margin-top: 8px; }
+    .path-box { border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; color: #475569; padding: 13px 14px; min-height: 22px; overflow-wrap: anywhere; }
+    .form-block { margin: 28px 0; }
+    .inline-label { display: inline-flex; align-items: center; gap: 12px; margin: 0; }
+    .inline-label input { width: 140px; }
+    @media (max-width: 760px) {
+      main { padding: 18px; }
+      .header { display: block; }
+      .header button { margin-top: 14px; }
+      .tabs { overflow-x: auto; padding-left: 16px; }
+      .tab-button { white-space: nowrap; }
+      .panel-body { padding: 24px 18px; }
+      .path-row { grid-template-columns: 1fr; }
+    }
     @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(1.4); } }
     a { color: #2563eb; }
   </style>
 </head>
 <body>
   <main>
-    <h1>EchoScribe</h1>
-    <p>离线音视频转文字工具。本地运行，不上传到外部服务。</p>
-    <p><button class="danger" onclick="shutdownApp()">退出 EchoScribe</button></p>
+    <div class="header">
+      <div>
+        <h1>EchoScribe</h1>
+        <p class="subtitle">离线音视频转文字工具。本地运行，不上传到外部服务。</p>
+      </div>
+      <button class="danger" onclick="shutdownApp()">退出 EchoScribe</button>
+    </div>
 
-    <section>
-      <h2>导入音频 / 视频转写</h2>
-      <label>语言</label>
-      <select id="language">
-        <option value="Auto">Auto</option>
-        <option value="Chinese">Chinese</option>
-        <option value="English">English</option>
-      </select>
-      <label>选择文件</label>
-      <input id="file" type="file">
-      <p class="muted">支持 mp4、mkv、mp3、wav、m4a、flac 等常见格式。</p>
-      <button id="transcribeBtn" onclick="transcribeUpload()">上传并转写</button>
-    </section>
-
-    <section>
-      <div class="tabs" role="tablist" aria-label="录制功能">
-        <button id="recordTab" class="tab-button active" role="tab" aria-selected="true" aria-controls="recordPanel" onclick="showRecordTab('record')">录制电脑声音</button>
-        <button id="liveTab" class="tab-button" role="tab" aria-selected="false" aria-controls="livePanel" onclick="showRecordTab('live')">实时会议记录</button>
+    <section class="app-card">
+      <div class="tabs" role="tablist" aria-label="EchoScribe 功能">
+        <button id="importTab" class="tab-button active" role="tab" aria-selected="true" aria-controls="importPanel" onclick="showMainTab('import')">导入音频 / 视频转写</button>
+        <button id="recordTab" class="tab-button" role="tab" aria-selected="false" aria-controls="recordPanel" onclick="showMainTab('record')">录制电脑声音</button>
+        <button id="liveTab" class="tab-button" role="tab" aria-selected="false" aria-controls="livePanel" onclick="showMainTab('live')">实时会议记录</button>
       </div>
 
-      <div id="recordPanel" class="tab-panel active" role="tabpanel" aria-labelledby="recordTab">
-        <h2>录制电脑声音</h2>
-        <div class="row">
-          <label>固定录制秒数 <input id="seconds" type="number" min="1" value="60"></label>
-          <button onclick="recordFixed()">固定时长录制</button>
+      <div id="importPanel" class="tab-panel active" role="tabpanel" aria-labelledby="importTab">
+        <div class="panel-body">
+          <h2>导入音频 / 视频转写</h2>
+          <p class="intro">选择本地音频或视频文件，自动抽取音频并离线转写。</p>
+          <div class="form-block">
+            <label>语言</label>
+            <select id="language">
+              <option value="Auto">Auto</option>
+              <option value="Chinese">Chinese</option>
+              <option value="English">English</option>
+            </select>
+          </div>
+          <div class="form-block">
+            <label>选择文件</label>
+            <input id="file" type="file">
+            <p class="muted">支持 mp4、mkv、mp3、wav、m4a、flac 等常见格式。</p>
+          </div>
+          <button id="transcribeBtn" onclick="transcribeUpload()">上传并转写</button>
         </div>
-        <div class="row">
-          <button id="startBtn" onclick="recordStart()">开始录制</button>
-          <button id="stopBtn" class="secondary" onclick="recordStop()">停止录制</button>
-          <button id="transcribeRecordingBtn" onclick="transcribeLastRecording()">转写最后一次录音</button>
+      </div>
+
+      <div id="recordPanel" class="tab-panel" role="tabpanel" aria-labelledby="recordTab">
+        <div class="panel-body">
+          <h2>录制电脑声音</h2>
+          <p class="intro">录制当前电脑扬声器播放的声音，录制完成后可直接转写。</p>
+          <div class="row">
+            <label class="inline-label">固定录制秒数 <input id="seconds" type="number" min="1" value="60"></label>
+            <button onclick="recordFixed()">开始定时录制</button>
+          </div>
+          <div class="row">
+            <button id="startBtn" onclick="recordStart()">开始录制</button>
+            <button id="stopBtn" class="secondary" onclick="recordStop()">停止录制</button>
+          </div>
+          <div id="recordStatus" class="status"><span class="dot"></span><span id="recordStatusText">未在录制</span></div>
+
+          <div class="form-block">
+            <label>录制文件</label>
+            <div class="path-row">
+              <div id="recordingPath" class="path-box">还没有录制文件。录制完成后会自动显示在这里。</div>
+              <button id="transcribeRecordingBtn" onclick="transcribeLastRecording()">转写此录音</button>
+            </div>
+          </div>
         </div>
-        <div id="recordStatus" class="status"><span class="dot"></span><span id="recordStatusText">未在录制</span></div>
-        <p id="lastRecording" class="muted">还没有录制文件。录制完成后会自动加载到“转写最后一次录音”。</p>
       </div>
 
       <div id="livePanel" class="tab-panel" role="tabpanel" aria-labelledby="liveTab">
-        <h2>实时会议记录</h2>
-        <p class="muted">同时录制电脑扬声器声音和麦克风声音；麦克风会按片段实时转写并显示在这里。停止后自动生成音频和记录文件。</p>
-        <div class="row">
-          <button id="liveStartBtn" onclick="liveStart()">开始实时记录</button>
-          <button id="liveStopBtn" class="secondary" onclick="liveStop()">停止并生成文件</button>
+        <div class="panel-body">
+          <h2>实时会议记录</h2>
+          <p class="intro">同时录制电脑扬声器声音和麦克风声音；麦克风会按片段实时转写并显示在这里。停止后自动生成音频和记录文件。</p>
+          <div class="row">
+            <button id="liveStartBtn" onclick="liveStart()">开始实时记录</button>
+            <button id="liveStopBtn" class="secondary" onclick="liveStop()">停止并生成文件</button>
+          </div>
+          <div id="liveStatus" class="status"><span class="dot"></span><span id="liveStatusText">未在实时记录</span></div>
+          <label>实时字幕</label>
+          <div id="liveCaptions">等待开始...</div>
         </div>
-        <div id="liveStatus" class="status"><span class="dot"></span><span id="liveStatusText">未在实时记录</span></div>
-        <label>实时字幕</label>
-        <div id="liveCaptions">等待开始...</div>
       </div>
     </section>
 
@@ -139,14 +182,13 @@ function language() {
   return encodeURIComponent(document.getElementById('language').value);
 }
 
-function showRecordTab(tab) {
-  const isLive = tab === 'live';
-  document.getElementById('recordTab').classList.toggle('active', !isLive);
-  document.getElementById('liveTab').classList.toggle('active', isLive);
-  document.getElementById('recordPanel').classList.toggle('active', !isLive);
-  document.getElementById('livePanel').classList.toggle('active', isLive);
-  document.getElementById('recordTab').setAttribute('aria-selected', String(!isLive));
-  document.getElementById('liveTab').setAttribute('aria-selected', String(isLive));
+function showMainTab(tab) {
+  for (const name of ['import', 'record', 'live']) {
+    const active = name === tab;
+    document.getElementById(name + 'Tab').classList.toggle('active', active);
+    document.getElementById(name + 'Panel').classList.toggle('active', active);
+    document.getElementById(name + 'Tab').setAttribute('aria-selected', String(active));
+  }
 }
 
 function setRecordingState(isRecording, detail) {
@@ -178,7 +220,7 @@ function stopRecordingTimer() {
 
 function setLastRecording(path) {
   lastRecordingPath = path;
-  document.getElementById('lastRecording').textContent = '最后一次录音已加载: ' + path;
+  document.getElementById('recordingPath').textContent = path;
   document.getElementById('transcribeRecordingBtn').disabled = false;
 }
 
@@ -331,6 +373,7 @@ window.addEventListener('pagehide', () => {
 
 setRecordingState(false);
 setLiveState(false);
+document.getElementById('transcribeRecordingBtn').disabled = true;
 heartbeat();
 setInterval(heartbeat, 3000);
 </script>
