@@ -21,6 +21,8 @@ JOBS: dict[str, dict[str, Any]] = {}
 RECORDER: SystemAudioRecorder | None = None
 LAST_RECORDING: Path | None = None
 LIVE_SESSION: LiveMeetingSession | None = None
+CLIENT_LAST_SEEN = 0.0
+SHUTDOWN_REQUESTED = False
 
 
 HTML = r"""<!doctype html>
@@ -41,6 +43,7 @@ HTML = r"""<!doctype html>
     input[type="file"] { display: block; }
     button { padding: 9px 14px; border: 0; border-radius: 6px; background: #2563eb; color: white; cursor: pointer; margin-right: 8px; }
     button.secondary { background: #475569; }
+    button.danger { background: #dc2626; }
     button:disabled { background: #94a3b8; cursor: wait; }
     #log { white-space: pre-wrap; background: #0f172a; color: #dbeafe; border-radius: 8px; padding: 14px; min-height: 180px; overflow: auto; }
     #liveCaptions { white-space: pre-wrap; background: #111827; color: #f8fafc; border-radius: 8px; padding: 14px; min-height: 160px; overflow: auto; font-size: 17px; line-height: 1.6; }
@@ -64,6 +67,7 @@ HTML = r"""<!doctype html>
   <main>
     <h1>EchoScribe</h1>
     <p>离线音视频转文字工具。本地运行，不上传到外部服务。</p>
+    <p><button class="danger" onclick="shutdownApp()">退出 EchoScribe</button></p>
 
     <section>
       <h2>导入音频 / 视频转写</h2>
@@ -308,8 +312,27 @@ async function poll() {
   }
 }
 
+async function heartbeat() {
+  try {
+    await fetch('/api/heartbeat', {method: 'POST', keepalive: true});
+  } catch (err) {
+    // The local service is probably already closed.
+  }
+}
+
+async function shutdownApp() {
+  await fetch('/api/shutdown', {method: 'POST', keepalive: true});
+  document.body.innerHTML = '<main><h1>EchoScribe 已退出</h1><p>现在可以关闭这个浏览器页面了。</p></main>';
+}
+
+window.addEventListener('pagehide', () => {
+  navigator.sendBeacon('/api/client-close', new Blob(['close'], {type: 'text/plain'}));
+});
+
 setRecordingState(false);
 setLiveState(false);
+heartbeat();
+setInterval(heartbeat, 3000);
 </script>
 </body>
 </html>
@@ -348,12 +371,59 @@ def _language(query: dict[str, list[str]]) -> str | None:
     return LANGUAGE_CHOICES.get(choice, None)
 
 
+def _touch_client() -> None:
+    global CLIENT_LAST_SEEN
+    CLIENT_LAST_SEEN = time.time()
+
+
+def _cleanup_runtime() -> None:
+    global RECORDER, LIVE_SESSION
+    if RECORDER is not None:
+        try:
+            RECORDER.stop()
+        except Exception:
+            pass
+        RECORDER = None
+    if LIVE_SESSION is not None and LIVE_SESSION.status == "recording":
+        try:
+            LIVE_SESSION.stop()
+        except Exception:
+            pass
+
+
+def _request_shutdown(server: ThreadingHTTPServer, delay: float = 0.8) -> None:
+    global SHUTDOWN_REQUESTED
+    if SHUTDOWN_REQUESTED:
+        return
+    SHUTDOWN_REQUESTED = True
+
+    def run() -> None:
+        time.sleep(delay)
+        _cleanup_runtime()
+        server.shutdown()
+
+    threading.Thread(target=run, daemon=True).start()
+
+
+def _watch_client(server: ThreadingHTTPServer, timeout: float = 12.0) -> None:
+    while not SHUTDOWN_REQUESTED:
+        time.sleep(2.0)
+        if CLIENT_LAST_SEEN and time.time() - CLIENT_LAST_SEEN > timeout:
+            _request_shutdown(server, delay=0.2)
+            return
+
+
+class EchoScribeServer(ThreadingHTTPServer):
+    daemon_threads = True
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "EchoScribe/0.1"
 
     def do_GET(self) -> None:
         parsed = urllib.parse.urlparse(self.path)
         if parsed.path == "/":
+            _touch_client()
             body = HTML.encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
@@ -382,6 +452,21 @@ class Handler(BaseHTTPRequestHandler):
         query = urllib.parse.parse_qs(parsed.query)
 
         try:
+            if parsed.path == "/api/heartbeat":
+                _touch_client()
+                _json(self, {"ok": True})
+                return
+
+            if parsed.path == "/api/client-close":
+                _json(self, {"ok": True})
+                _request_shutdown(self.server)
+                return
+
+            if parsed.path == "/api/shutdown":
+                _json(self, {"ok": True})
+                _request_shutdown(self.server, delay=0.2)
+                return
+
             if parsed.path == "/api/transcribe-upload":
                 raw_name = self.headers.get("X-Filename", "upload.bin")
                 filename = Path(urllib.parse.unquote(raw_name)).name
@@ -472,12 +557,13 @@ def main() -> None:
     host = "127.0.0.1"
     port_env = os.environ.get("ECHOSCRIBE_PORT")
     port = int(port_env) if port_env else 0
-    server = ThreadingHTTPServer((host, port), Handler)
+    server = EchoScribeServer((host, port), Handler)
     port = server.server_address[1]
     url = f"http://{host}:{port}/"
     print(f"{APP_NAME} is running at {url}")
     if os.environ.get("ECHOSCRIBE_NO_BROWSER") != "1":
         webbrowser.open(url)
+        threading.Thread(target=_watch_client, args=(server,), daemon=True).start()
     server.serve_forever()
 
 
