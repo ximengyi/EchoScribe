@@ -17,6 +17,14 @@ EchoScribe 是一个 Windows 本地离线转写工具，用来把音频、视频
 
 第一版不支持直接下载抖音、B站、YouTube 等平台链接。你可以先把视频保存到本地再导入，或者播放视频时使用“录制电脑声音”。
 
+## 平台支持
+
+- Windows：支持本地文件转写、系统声音录制、实时会议记录。
+- Linux：支持本地文件转写；系统声音录制和实时会议记录暂未适配。
+- macOS：支持本地文件转写；系统声音录制和实时会议记录暂未适配。
+
+Linux/macOS 版本会通过 GitHub Actions 在对应平台上构建。由于系统音频采集接口差异较大，录音功能第一版仍以 Windows 为主。
+
 ## 便携版使用方法
 
 1. 解压 `EchoScribe-portable-web-fixed.zip`。
@@ -55,6 +63,12 @@ cd D:\pywork\EchoScribe
 ```text
 dist\EchoScribe-portable.zip
 ```
+
+GitHub Actions 会自动构建三端包：
+
+- `EchoScribe-windows-x64.zip`
+- `EchoScribe-linux-x64.zip`
+- `EchoScribe-macos-arm64.zip` 或 `EchoScribe-macos-x64.zip`
 
 ## 推荐硬件配置
 

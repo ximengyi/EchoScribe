@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -23,6 +24,7 @@ class SystemAudioRecorder:
         return wav_path, stop_file
 
     def record_fixed(self, seconds: int) -> tuple[Path, Path]:
+        self._ensure_windows_recording()
         if seconds <= 0:
             raise ValueError("seconds must be greater than zero")
         wav_path, _ = self._new_paths()
@@ -46,6 +48,7 @@ class SystemAudioRecorder:
         return wav_path, mp3_path
 
     def start(self) -> Path:
+        self._ensure_windows_recording()
         if self.process and self.process.poll() is None:
             raise RuntimeError("recording is already running")
 
@@ -70,6 +73,7 @@ class SystemAudioRecorder:
         return self.wav_path
 
     def stop(self) -> tuple[Path, Path]:
+        self._ensure_windows_recording()
         if not self.process or self.process.poll() is not None:
             raise RuntimeError("recording is not running")
         if not self.stop_file or not self.wav_path:
@@ -84,3 +88,7 @@ class SystemAudioRecorder:
         mp3_path = convert_to_mp3(self.wav_path, self.wav_path.with_suffix(".mp3"))
         return self.wav_path, mp3_path
 
+    @staticmethod
+    def _ensure_windows_recording() -> None:
+        if not sys.platform.startswith("win"):
+            raise RuntimeError("System audio recording is currently supported on Windows only.")

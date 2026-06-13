@@ -7,20 +7,8 @@ try {
         & .\scripts\setup_dev.ps1
     }
 
-    & .\.venv\Scripts\pyinstaller.exe `
-        --noconfirm `
-        --windowed `
-        --name EchoScribe `
-        --paths .\src `
-        --add-data "vendor;vendor" `
-        --add-data "scripts\record_system_audio.ps1;scripts" `
-        --add-data ".venv\Lib\site-packages\faster_whisper\assets;faster_whisper\assets" `
-        src\echoscribe\app_web.py
-
-    $zip = Join-Path $root "dist\EchoScribe-portable.zip"
-    if (Test-Path $zip) { Remove-Item $zip -Force }
-    Compress-Archive -Path "dist\EchoScribe\*" -DestinationPath $zip
-    Write-Host "Portable package: $zip"
+    & .\.venv\Scripts\python.exe .\scripts\download_model.py
+    & .\.venv\Scripts\python.exe .\scripts\build_portable.py
 }
 finally {
     Pop-Location

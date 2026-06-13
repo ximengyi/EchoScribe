@@ -20,10 +20,19 @@ def resource_root() -> Path:
 
 
 def ffmpeg_path() -> Path:
-    bundled = resource_root() / "vendor" / "ffmpeg" / "ffmpeg.exe"
+    exe_name = "ffmpeg.exe" if sys.platform.startswith("win") else "ffmpeg"
+    bundled = resource_root() / "vendor" / "ffmpeg" / exe_name
     if bundled.exists():
         return bundled
-    raise FileNotFoundError(f"ffmpeg.exe not found: {bundled}")
+
+    try:
+        import imageio_ffmpeg
+
+        return Path(imageio_ffmpeg.get_ffmpeg_exe())
+    except Exception:
+        pass
+
+    raise FileNotFoundError("ffmpeg not found. Bundle ffmpeg or install imageio-ffmpeg.")
 
 
 def model_path() -> Path:
