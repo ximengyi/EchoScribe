@@ -44,3 +44,7 @@ def to_txt(segments: list[Segment]) -> str:
     ]
     return "\n".join(lines) + ("\n" if lines else "")
 
+
+def to_plain_txt(segments: list[Segment]) -> str:
+    lines = [seg.text for seg in segments]
+    return "\n".join(lines) + ("\n" if lines else "")

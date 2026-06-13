@@ -68,3 +68,56 @@ def convert_to_mp3(input_path: Path, output_path: Path) -> Path:
         raise RuntimeError(f"ffmpeg MP3 conversion failed:\n{result.stderr.strip()}")
     return output_path
 
+
+def concat_wav_files(input_paths: list[Path], output_path: Path) -> Path:
+    if not input_paths:
+        raise ValueError("no audio chunks to concatenate")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    list_path = output_path.with_suffix(".concat.txt")
+    lines = [f"file '{path.resolve().as_posix()}'" for path in input_paths]
+    list_path.write_text("\n".join(lines), encoding="utf-8")
+    command = [
+        str(ffmpeg_path()),
+        "-hide_banner",
+        "-y",
+        "-f",
+        "concat",
+        "-safe",
+        "0",
+        "-i",
+        str(list_path),
+        "-c",
+        "copy",
+        str(output_path),
+    ]
+    result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    if result.returncode != 0:
+        raise RuntimeError(f"ffmpeg concat failed:\n{result.stderr.strip()}")
+    return output_path
+
+
+def mix_audio_files(input_paths: list[Path], output_path: Path) -> Path:
+    if not input_paths:
+        raise ValueError("no audio files to mix")
+    if len(input_paths) == 1:
+        return convert_to_mp3(input_paths[0], output_path)
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    command = [str(ffmpeg_path()), "-hide_banner", "-y"]
+    for path in input_paths:
+        command.extend(["-i", str(path)])
+    command.extend(
+        [
+            "-filter_complex",
+            f"amix=inputs={len(input_paths)}:duration=longest:normalize=0",
+            "-codec:a",
+            "libmp3lame",
+            "-b:a",
+            "192k",
+            str(output_path),
+        ]
+    )
+    result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    if result.returncode != 0:
+        raise RuntimeError(f"ffmpeg mix failed:\n{result.stderr.strip()}")
+    return output_path

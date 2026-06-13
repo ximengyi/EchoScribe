@@ -14,7 +14,8 @@ try {
         --paths .\src `
         --add-data "vendor;vendor" `
         --add-data "scripts\record_system_audio.ps1;scripts" `
-        src\echoscribe\app.py
+        --add-data ".venv\Lib\site-packages\faster_whisper\assets;faster_whisper\assets" `
+        src\echoscribe\app_web.py
 
     $zip = Join-Path $root "dist\EchoScribe-portable.zip"
     if (Test-Path $zip) { Remove-Item $zip -Force }
@@ -24,4 +25,3 @@ try {
 finally {
     Pop-Location
 }
-

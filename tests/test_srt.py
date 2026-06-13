@@ -1,4 +1,4 @@
-from echoscribe.core.subtitles import Segment, format_timestamp, to_srt, to_txt
+from echoscribe.core.subtitles import Segment, format_timestamp, to_plain_txt, to_srt, to_txt
 
 
 def test_format_timestamp_for_srt():
@@ -15,3 +15,7 @@ def test_txt_output():
     txt = to_txt([Segment(0, 1.2, "hello")])
     assert txt == "[00:00.000 - 00:01.200] hello\n"
 
+
+def test_plain_txt_output():
+    txt = to_plain_txt([Segment(0, 1.2, "hello"), Segment(1.2, 2.5, "world")])
+    assert txt == "hello\nworld\n"
