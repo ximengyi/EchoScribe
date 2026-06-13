@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
+import sys
 import threading
 import time
 import urllib.parse
@@ -53,6 +55,11 @@ HTML = r"""<!doctype html>
     .app-card { padding: 0; overflow: hidden; }
     .panel-body { padding: 32px 26px 28px; }
     .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .action-group { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 18px 0; }
+    .action-group label { margin: 0; }
+    .button-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 16px 0; }
+    .button-row button, .path-row button, .action-group button { margin-right: 0; }
+    .panel-toolbar { display: flex; justify-content: flex-end; margin-bottom: 18px; }
     .muted { color: #64748b; font-size: 13px; }
     .intro { color: #64748b; font-size: 16px; margin: 0 0 28px; }
     .status { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; padding: 10px 12px; border-radius: 8px; background: #ecfdf5; color: #166534; font-weight: 700; }
@@ -65,8 +72,9 @@ HTML = r"""<!doctype html>
     .tab-button:hover { background: #eff6ff; color: #1d4ed8; }
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
-    .path-row { display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: center; margin-top: 8px; }
+    .path-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-items: start; margin-top: 8px; }
     .path-box { border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; color: #475569; padding: 13px 14px; min-height: 22px; overflow-wrap: anywhere; }
+    .file-actions { display: flex; gap: 12px; flex-wrap: wrap; }
     .form-block { margin: 28px 0; }
     .inline-label { display: inline-flex; align-items: center; gap: 12px; margin: 0; }
     .inline-label input { width: 140px; }
@@ -77,7 +85,7 @@ HTML = r"""<!doctype html>
       .tabs { overflow-x: auto; padding-left: 16px; }
       .tab-button { white-space: nowrap; }
       .panel-body { padding: 24px 18px; }
-      .path-row { grid-template-columns: 1fr; }
+      .panel-toolbar { justify-content: flex-start; }
     }
     @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(1.4); } }
     a { color: #2563eb; }
@@ -102,6 +110,9 @@ HTML = r"""<!doctype html>
 
       <div id="importPanel" class="tab-panel active" role="tabpanel" aria-labelledby="importTab">
         <div class="panel-body">
+          <div class="panel-toolbar">
+            <button class="secondary" onclick="openOutputDir()">打开输出目录</button>
+          </div>
           <h2>导入音频 / 视频转写</h2>
           <p class="intro">选择本地音频或视频文件，自动抽取音频并离线转写。</p>
           <div class="form-block">
@@ -117,19 +128,24 @@ HTML = r"""<!doctype html>
             <input id="file" type="file">
             <p class="muted">支持 mp4、mkv、mp3、wav、m4a、flac 等常见格式。</p>
           </div>
-          <button id="transcribeBtn" onclick="transcribeUpload()">上传并转写</button>
+          <div class="button-row">
+            <button id="transcribeBtn" onclick="transcribeUpload()">上传并转写</button>
+          </div>
         </div>
       </div>
 
       <div id="recordPanel" class="tab-panel" role="tabpanel" aria-labelledby="recordTab">
         <div class="panel-body">
+          <div class="panel-toolbar">
+            <button class="secondary" onclick="openOutputDir()">打开输出目录</button>
+          </div>
           <h2>录制电脑声音</h2>
           <p class="intro">录制当前电脑扬声器播放的声音，录制完成后可直接转写。</p>
-          <div class="row">
+          <div class="action-group">
             <label class="inline-label">固定录制秒数 <input id="seconds" type="number" min="1" value="60"></label>
             <button onclick="recordFixed()">开始定时录制</button>
           </div>
-          <div class="row">
+          <div class="button-row">
             <button id="startBtn" onclick="recordStart()">开始录制</button>
             <button id="stopBtn" class="secondary" onclick="recordStop()">停止录制</button>
           </div>
@@ -139,7 +155,10 @@ HTML = r"""<!doctype html>
             <label>录制文件</label>
             <div class="path-row">
               <div id="recordingPath" class="path-box">还没有录制文件。录制完成后会自动显示在这里。</div>
-              <button id="transcribeRecordingBtn" onclick="transcribeLastRecording()">转写此录音</button>
+              <div class="file-actions">
+                <button id="transcribeRecordingBtn" onclick="transcribeLastRecording()">转写此录音</button>
+                <button class="secondary" onclick="openOutputDir()">打开输出目录</button>
+              </div>
             </div>
           </div>
         </div>
@@ -147,9 +166,12 @@ HTML = r"""<!doctype html>
 
       <div id="livePanel" class="tab-panel" role="tabpanel" aria-labelledby="liveTab">
         <div class="panel-body">
+          <div class="panel-toolbar">
+            <button class="secondary" onclick="openOutputDir()">打开输出目录</button>
+          </div>
           <h2>实时会议记录</h2>
           <p class="intro">同时录制电脑扬声器声音和麦克风声音；麦克风会按片段实时转写并显示在这里。停止后自动生成音频和记录文件。</p>
-          <div class="row">
+          <div class="button-row">
             <button id="liveStartBtn" onclick="liveStart()">开始实时记录</button>
             <button id="liveStopBtn" class="secondary" onclick="liveStop()">停止并生成文件</button>
           </div>
@@ -285,6 +307,14 @@ async function transcribeLastRecording() {
   const data = await res.json();
   if (!data.ok) { log('ERROR: ' + data.error); return; }
   watchJob(data.job_id);
+}
+
+async function openOutputDir() {
+  const res = await fetch('/api/open-output-dir', {method: 'POST'});
+  const data = await res.json();
+  if (!data.ok) {
+    log('ERROR: ' + data.error);
+  }
 }
 
 async function liveStart() {
@@ -434,6 +464,16 @@ def _cleanup_runtime() -> None:
             pass
 
 
+def _open_directory(path: Path) -> None:
+    path.mkdir(parents=True, exist_ok=True)
+    if sys.platform.startswith("win"):
+        os.startfile(path)  # type: ignore[attr-defined]
+    elif sys.platform == "darwin":
+        subprocess.Popen(["open", str(path)])
+    else:
+        subprocess.Popen(["xdg-open", str(path)])
+
+
 def _request_shutdown(server: ThreadingHTTPServer, delay: float = 0.8) -> None:
     global SHUTDOWN_REQUESTED
     if SHUTDOWN_REQUESTED:
@@ -508,6 +548,12 @@ class Handler(BaseHTTPRequestHandler):
             if parsed.path == "/api/shutdown":
                 _json(self, {"ok": True})
                 _request_shutdown(self.server, delay=0.2)
+                return
+
+            if parsed.path == "/api/open-output-dir":
+                output_dir = default_output_dir()
+                _open_directory(output_dir)
+                _json(self, {"ok": True, "path": str(output_dir)})
                 return
 
             if parsed.path == "/api/transcribe-upload":
