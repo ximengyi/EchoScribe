@@ -9,7 +9,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
-from echoscribe.config import ffmpeg_path, model_path
+from echoscribe.config import ffmpeg_path, model_path, output_session_dir
 from echoscribe.core.media import concat_wav_files, convert_to_mp3, mix_audio_files
 from echoscribe.core.process import popen_hidden
 from echoscribe.core.recorder import SystemAudioRecorder
@@ -28,7 +28,7 @@ class LiveMeetingSession:
         self.language = language
         self.mic_device = mic_device or os.environ.get("ECHOSCRIBE_MIC_DEVICE") or "麦克风 (Realtek High Definition Audio)"
         self.chunk_seconds = chunk_seconds
-        self.session_dir = output_dir / f"live-session-{time.strftime('%Y%m%d-%H%M%S')}"
+        self.session_dir = output_session_dir("live-session", root=output_dir)
         self.chunks_dir = self.session_dir / "mic_chunks"
         self.stop_event = threading.Event()
         self.thread: threading.Thread | None = None

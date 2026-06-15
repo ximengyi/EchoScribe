@@ -12,7 +12,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
-from echoscribe.config import APP_NAME, default_output_dir
+from echoscribe.config import APP_NAME, default_output_dir, output_session_dir
 from echoscribe.core.jobs import LANGUAGE_CHOICES, normalize_output_dir
 from echoscribe.core.live_session import LiveMeetingSession
 from echoscribe.core.recorder import SystemAudioRecorder
@@ -559,9 +559,10 @@ class Handler(BaseHTTPRequestHandler):
             if parsed.path == "/api/transcribe-upload":
                 raw_name = self.headers.get("X-Filename", "upload.bin")
                 filename = Path(urllib.parse.unquote(raw_name)).name
-                upload_dir = default_output_dir() / "uploads"
+                session_dir = output_session_dir(Path(filename).stem)
+                upload_dir = session_dir / "source"
                 upload_dir.mkdir(parents=True, exist_ok=True)
-                media_path = upload_dir / f"{int(time.time())}-{filename}"
+                media_path = upload_dir / filename
                 remaining = int(self.headers.get("Content-Length", "0"))
                 with media_path.open("wb") as fh:
                     while remaining > 0:
@@ -574,18 +575,19 @@ class Handler(BaseHTTPRequestHandler):
                 lang = _language(query)
 
                 def target(progress):
-                    return Transcriber(progress=progress).transcribe_media(media_path, default_output_dir(), language=lang)
+                    return Transcriber(progress=progress).transcribe_media(media_path, session_dir, language=lang)
 
                 _json(self, {"ok": True, "job_id": _start_job(f"transcribe {filename}", target)})
                 return
 
             if parsed.path == "/api/record-fixed":
                 seconds = int(query.get("seconds", ["60"])[0])
+                session_dir = output_session_dir("system-audio")
 
                 def target(progress):
                     global LAST_RECORDING
                     progress(f"Recording system audio for {seconds} seconds...")
-                    recorder = SystemAudioRecorder(default_output_dir())
+                    recorder = SystemAudioRecorder(session_dir)
                     wav, mp3 = recorder.record_fixed(seconds)
                     LAST_RECORDING = mp3
                     progress(f"Recorded MP3: {mp3}")
@@ -595,7 +597,7 @@ class Handler(BaseHTTPRequestHandler):
                 return
 
             if parsed.path == "/api/record-start":
-                RECORDER = SystemAudioRecorder(default_output_dir())
+                RECORDER = SystemAudioRecorder(output_session_dir("system-audio"))
                 wav = RECORDER.start()
                 _json(self, {"ok": True, "wav": str(wav)})
                 return
@@ -614,7 +616,9 @@ class Handler(BaseHTTPRequestHandler):
                 lang = _language(query)
 
                 def target(progress):
-                    return Transcriber(progress=progress).transcribe_media(LAST_RECORDING, default_output_dir(), language=lang)
+                    return Transcriber(progress=progress).transcribe_media(
+                        LAST_RECORDING, LAST_RECORDING.parent, language=lang
+                    )
 
                 _json(self, {"ok": True, "job_id": _start_job("transcribe last recording", target)})
                 return

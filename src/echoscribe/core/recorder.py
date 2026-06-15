@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import subprocess
 import sys
-import time
 from pathlib import Path
 
 from echoscribe.config import recording_script_path
@@ -19,9 +18,8 @@ class SystemAudioRecorder:
 
     def _new_paths(self) -> tuple[Path, Path]:
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        stamp = time.strftime("%Y%m%d-%H%M%S")
-        wav_path = self.output_dir / f"system-audio-{stamp}.wav"
-        stop_file = self.output_dir / f"system-audio-{stamp}.stop"
+        wav_path = self.output_dir / "system-audio.wav"
+        stop_file = self.output_dir / "system-audio.stop"
         return wav_path, stop_file
 
     def record_fixed(self, seconds: int) -> tuple[Path, Path]:
