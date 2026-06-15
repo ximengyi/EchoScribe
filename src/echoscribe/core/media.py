@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import subprocess
 from pathlib import Path
 
 from echoscribe.config import ffmpeg_path
+from echoscribe.core.process import run_hidden
 
 
 AUDIO_EXTENSIONS = {".wav", ".mp3", ".m4a", ".aac", ".flac", ".ogg", ".opus", ".wma"}
@@ -42,7 +42,7 @@ def extract_audio(input_path: Path, work_dir: Path) -> Path:
         "pcm_s16le",
         str(output_path),
     ]
-    result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    result = run_hidden(command, capture_output=True, text=True, encoding="utf-8", errors="replace")
     if result.returncode != 0:
         raise RuntimeError(f"ffmpeg failed:\n{result.stderr.strip()}")
     return output_path
@@ -63,7 +63,7 @@ def convert_to_mp3(input_path: Path, output_path: Path) -> Path:
         "192k",
         str(output_path),
     ]
-    result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    result = run_hidden(command, capture_output=True, text=True, encoding="utf-8", errors="replace")
     if result.returncode != 0:
         raise RuntimeError(f"ffmpeg MP3 conversion failed:\n{result.stderr.strip()}")
     return output_path
@@ -90,7 +90,7 @@ def concat_wav_files(input_paths: list[Path], output_path: Path) -> Path:
         "copy",
         str(output_path),
     ]
-    result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    result = run_hidden(command, capture_output=True, text=True, encoding="utf-8", errors="replace")
     if result.returncode != 0:
         raise RuntimeError(f"ffmpeg concat failed:\n{result.stderr.strip()}")
     return output_path
@@ -117,7 +117,7 @@ def mix_audio_files(input_paths: list[Path], output_path: Path) -> Path:
             str(output_path),
         ]
     )
-    result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    result = run_hidden(command, capture_output=True, text=True, encoding="utf-8", errors="replace")
     if result.returncode != 0:
         raise RuntimeError(f"ffmpeg mix failed:\n{result.stderr.strip()}")
     return output_path

@@ -11,6 +11,7 @@ from typing import Any
 
 from echoscribe.config import ffmpeg_path, model_path
 from echoscribe.core.media import concat_wav_files, convert_to_mp3, mix_audio_files
+from echoscribe.core.process import popen_hidden
 from echoscribe.core.recorder import SystemAudioRecorder
 from echoscribe.core.subtitles import Segment, to_plain_txt, to_srt, to_txt
 
@@ -139,7 +140,7 @@ class LiveMeetingSession:
             "pcm_s16le",
             str(chunk_path),
         ]
-        self.current_mic_process = subprocess.Popen(
+        self.current_mic_process = popen_hidden(
             command,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

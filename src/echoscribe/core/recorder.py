@@ -7,10 +7,7 @@ from pathlib import Path
 
 from echoscribe.config import recording_script_path
 from echoscribe.core.media import convert_to_mp3
-
-
-def _windows_no_window_creationflags() -> int:
-    return getattr(subprocess, "CREATE_NO_WINDOW", 0) if sys.platform.startswith("win") else 0
+from echoscribe.core.process import popen_hidden, run_hidden
 
 
 class SystemAudioRecorder:
@@ -48,13 +45,12 @@ class SystemAudioRecorder:
             "-Role",
             "Multimedia",
         ]
-        result = subprocess.run(
+        result = run_hidden(
             command,
             capture_output=True,
             text=True,
             encoding="utf-8",
             errors="replace",
-            creationflags=_windows_no_window_creationflags(),
         )
         if result.returncode != 0:
             raise RuntimeError(result.stderr.strip() or result.stdout.strip())
@@ -86,12 +82,11 @@ class SystemAudioRecorder:
             "-Role",
             "Multimedia",
         ]
-        self.process = subprocess.Popen(
+        self.process = popen_hidden(
             command,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            creationflags=_windows_no_window_creationflags(),
         )
         return self.wav_path
 
