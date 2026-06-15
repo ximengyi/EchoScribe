@@ -9,6 +9,10 @@ from echoscribe.config import recording_script_path
 from echoscribe.core.media import convert_to_mp3
 
 
+def _windows_no_window_creationflags() -> int:
+    return getattr(subprocess, "CREATE_NO_WINDOW", 0) if sys.platform.startswith("win") else 0
+
+
 class SystemAudioRecorder:
     def __init__(self, output_dir: Path) -> None:
         self.output_dir = output_dir
@@ -30,6 +34,9 @@ class SystemAudioRecorder:
         wav_path, _ = self._new_paths()
         command = [
             "powershell",
+            "-NoProfile",
+            "-WindowStyle",
+            "Hidden",
             "-ExecutionPolicy",
             "Bypass",
             "-File",
@@ -41,7 +48,14 @@ class SystemAudioRecorder:
             "-Role",
             "Multimedia",
         ]
-        result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            creationflags=_windows_no_window_creationflags(),
+        )
         if result.returncode != 0:
             raise RuntimeError(result.stderr.strip() or result.stdout.strip())
         mp3_path = convert_to_mp3(wav_path, wav_path.with_suffix(".mp3"))
@@ -58,6 +72,9 @@ class SystemAudioRecorder:
 
         command = [
             "powershell",
+            "-NoProfile",
+            "-WindowStyle",
+            "Hidden",
             "-ExecutionPolicy",
             "Bypass",
             "-File",
@@ -69,7 +86,13 @@ class SystemAudioRecorder:
             "-Role",
             "Multimedia",
         ]
-        self.process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        self.process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            creationflags=_windows_no_window_creationflags(),
+        )
         return self.wav_path
 
     def stop(self) -> tuple[Path, Path]:
